@@ -110,8 +110,7 @@ sub("${it.stock<=0?'Out of stock':it.stock+' in stock'}</div>`;\n    if(it.stock
 sub("document.getElementById('qm-stock').innerText=`In stock: ${p.stock}`+(ci?` • Already in cart: ${ci.qty}`:'');",
     "document.getElementById('qm-stock').innerText=(p.made_to_order?'Made to order':`In stock: ${p.stock}`)+(ci?` • Already in order: ${ci.qty}`:'');")
 sub('const q=document.getElementById(\'qm-qty\');q.value=1;q.max=p.stock;', "const q=document.getElementById('qm-qty');q.value=1;q.max=p.made_to_order?999:p.stock;")
-sub_any('Cart is empty', 'No dishes yet')
-sub_any('Tap a product to add', 'Tap a dish to add it')
+sub('Cart is empty<br><span style="font-size:.75rem;">Tap a product to add', 'No dishes yet<br><span style="font-size:.75rem;">Tap a dish to add it')
 sub('<div class="ch">&#128722; Cart <span class="cbdg" id="cbdg">0</span>', '<div class="ch">&#128203; Order <span class="cbdg" id="cbdg">0</span>')
 sub("""        <div class="ck">
           <div class="fg"><label>Payment Method</label>""", """        <div class="ck">

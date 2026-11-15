@@ -2787,7 +2787,7 @@ function renderCart(){
   const cl=document.getElementById('cl'),bd=document.getElementById('cbdg');
   const tot=cart.reduce((s,i)=>s+i.price*i.qty,0);
   if(!cart.length){
-    cl.innerHTML='<div class="ce"><div class="ei">🛒</div>Cart is empty<br><span style="font-size:.75rem;">Tap a product to add</span></div>';
+    cl.innerHTML='<div class="ce"><div class="ei">🛒</div>No dishes yet<br><span style="font-size:.75rem;">Tap a dish to add it</span></div>';
     bd.innerText='0';document.getElementById('gtot').innerText=GH(0);
     document.getElementById('stot').innerText=GH(0);calcCh();return;
   }
