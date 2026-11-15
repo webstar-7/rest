@@ -345,8 +345,8 @@ sub('color:var(--p);">+ New Cashier</h3>\n            <form id="chf">\n         
     '              <div class="fg"><label>Full name (or a name for the screen, e.g. Kitchen)</label>')
 sub('<button type="submit" class="btn bf ba">Create Cashier</button>', '<button type="submit" class="btn bf ba">Create login</button>')
 sub('color:var(--p);">Current Cashiers</h3>', 'color:var(--p);">Current logins</h3>')
-sub('<table id="cht"><thead><tr><th>Name</th><th>Username</th><th>Status</th><th></th></tr></thead>',
-    '<table id="cht"><thead><tr><th>Name</th><th>Username</th><th>For</th><th>Status</th><th></th></tr></thead>')
+sub('<table id="cht"><thead><tr><th>Name</th><th>Username</th><th>Status</th><th>Screening</th><th></th></tr></thead>',
+    '<table id="cht"><thead><tr><th>Name</th><th>Username</th><th>For</th><th>Status</th><th>Screening</th><th></th></tr></thead>')
 sub('No cashiers yet — create one on the left.', 'No staff logins yet — create one on the left.')
 
 
@@ -357,6 +357,7 @@ def staff_js(_old):
   L(true);
   const{data,error}=await sb.from('profiles').select('id,full_name,login_username,is_active,created_at,role')
     .eq('org_id',prof.org_id).in('role',['cashier','kitchen']).order('full_name');
+  await loadScreening();
   L(false);
   tb.innerHTML='';
   if(error){em.style.display='block';em.innerText='Could not load staff logins: '+error.message;return;}
@@ -368,8 +369,10 @@ def staff_js(_old):
       <td style="font-family:monospace;">${E(c.login_username||'—')}</td>
       <td>${c.role==='kitchen'?'Kitchen':'Cashier'}</td>
       <td><span class="badge ${c.is_active?'bg':'br'}">${c.is_active?'Active':'Inactive'}</span></td>
-      <td><button class="btn bsm bd">Delete</button></td>`;
-    tr.querySelector('button').onclick=()=>deleteCashier(c.id,c.full_name,c.role);
+      ${screenCell(c)}
+      <td><button class="btn bsm bd del">Delete</button></td>`;
+    tr.querySelector('.scr').onclick=()=>openScreening(c);
+    tr.querySelector('.del').onclick=()=>deleteCashier(c.id,c.full_name,c.role);
     tb.appendChild(tr);
   });
 }
