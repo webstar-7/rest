@@ -722,11 +722,6 @@ main>.view.on{animation:viewIn .3s ease both;}
               <div class="fg"><label>Barcode (optional)</label><input type="text" id="abr"></div>
               <div class="fg"><label>Selling Price (GH&#8373;)</label><input type="number" step="0.01" id="asp" required></div>
               <div class="fg"><label>Cost Price (GH&#8373;)</label><input type="number" step="0.01" id="acp" value="0"></div>
-              <label class="os-chk"><input type="checkbox" id="amto" checked onchange="syncMtoCreate()"> <span>Made to order (no stock to count)<br><span class="hint">Leave ticked for dishes you cook. Untick for bottled or packaged items you count.</span></span></label>
-              <div id="astk-wrap" style="display:none;">
-                <div class="fg"><label>Stock you have now</label><input type="number" id="astk" min="0"></div>
-                <div class="fg"><label>Note</label><input type="text" id="anote" placeholder="e.g. Opening stock"></div>
-              </div>
               <div class="fg"><label>Photo (optional)</label>
                 <div class="os-row">
                   <img id="cr-photo-prev" alt="" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--b);display:none;">
@@ -737,6 +732,11 @@ main>.view.on{animation:viewIn .3s ease both;}
                     <div class="hint" id="cr-photo-msg" style="margin-top:4px;">Shown on the till, on your online menu and on nyansatek.food.</div>
                   </div>
                 </div>
+              </div>
+              <label class="os-chk"><input type="checkbox" id="amto" checked onchange="syncMtoCreate()"> <span>Made to order (no stock to count)<br><span class="hint">Leave ticked for dishes you cook. Untick for bottled or packaged items you count.</span></span></label>
+              <div id="astk-wrap" style="display:none;">
+                <div class="fg"><label>Stock you have now</label><input type="number" id="astk" min="0"></div>
+                <div class="fg"><label>Note</label><input type="text" id="anote" placeholder="e.g. Opening stock"></div>
               </div>
               <button type="submit" class="btn bf">Save item</button>
             </form>
@@ -3416,6 +3416,7 @@ document.getElementById('apf').addEventListener('submit',async e=>{
     if(error)throw error;
     if(!mto)await sb.from('inventory_log').insert({org_id:prof.org_id,product_id:prod.id,
       product_name_snapshot:nm,added_by:prof.id,qty_added:stk,stock_before:0,stock_after:stk,note:note||'Initial stock'});
+    // a photo picked on the Create form is saved with the new dish (needs internet)
     let photoNote='';
     if(newPhoto){
       try{

@@ -200,76 +200,23 @@ def create_handler(t):
     old = "    await sb.from('inventory_log').insert({org_id:prof.org_id,product_id:prod.id,"
     assert t.count(old) == 1
     t = t.replace(old, "    if(!mto)await sb.from('inventory_log').insert({org_id:prof.org_id,product_id:prod.id,")
-    assert t.count("alert('Product saved!');") == 1
-    t = t.replace("alert('Product saved!');", "alert('Saved to your menu.');")
-    # a photo picked on the Create form is saved with the new dish (needs internet)
-    old = "    L(false);e.target.reset();await loadInv(prof.org_id);alert('Saved to your menu.');"
-    assert t.count(old) == 1
-    t = t.replace(old, r"""    let photoNote='';
-    if(newPhoto){
-      try{
-        const path=`${prof.org_id}/${prod.id}-${Date.now()}.jpg`;
-        const up=await sb.storage.from('product-photos').upload(path,newPhoto,{contentType:'image/jpeg',upsert:false,cacheControl:'31536000'});
-        if(up.error)throw up.error;
-        const u=await sb.from('products').update({photo_url:sb.storage.from('product-photos').getPublicUrl(path).data.publicUrl}).eq('id',prod.id);
-        if(u.error)throw u.error;
-      }catch(pe){photoNote=' But the photo could not be saved. Add it under Menu → Edit.';}
-    }
-    L(false);e.target.reset();clearNewPhoto();await loadInv(prof.org_id);alert('Saved to your menu.'+photoNote);""")
-    old = "    L(false);e.target.reset();renderPG();renderInvTable('ait');updateOfflineUI();\n    alert(`You're offline — \"${nm}\" has been saved on this device and will sync automatically once you're back online.`);"
-    assert t.count(old) == 1, t.count(old)
-    t = t.replace(old, "    const hadPhoto=!!newPhoto;\n    L(false);e.target.reset();clearNewPhoto();renderPG();renderInvTable('ait');updateOfflineUI();\n    alert(`You're offline — \"${nm}\" has been saved on this device and will sync automatically once you're back online.`+(hadPhoto?' The photo was not saved: add it under Menu → Edit when you are online.':''));")
+    assert t.count("alert('Product saved!'+photoNote);") == 1
+    t = t.replace("alert('Product saved!'+photoNote);", "alert('Saved to your menu.'+photoNote);")
+    # Shop's create form already saves a photo; only the wording changes here
+    for old, new in (("Add it under Admin Inventory → Edit.", "Add it under Menu → Edit."),
+                     ("add it under Admin Inventory → Edit when you are online.", "add it under Menu → Edit when you are online."),
+                     ("saved with the new product", "saved with the new dish")):
+        assert t.count(old) == 1, (t.count(old), old)
+        t = t.replace(old, new)
     return t
 
 
 region("document.getElementById('apf').addEventListener('submit',async e=>{", "\n});", create_handler)
 
-# ------------------------------------------------------------------ a photo when creating a dish
-sub('''              <button type="submit" class="btn bf">Save item</button>''',
-    '''              <div class="fg"><label>Photo (optional)</label>
-                <div class="os-row">
-                  <img id="cr-photo-prev" alt="" style="width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--b);display:none;">
-                  <div>
-                    <input type="file" id="cr-photo" accept="image/*" style="display:none;" onchange="pickNewPhoto(this)">
-                    <button type="button" class="btn" style="background:#fff;color:var(--p);border:1px solid var(--b);" onclick="document.getElementById('cr-photo').click()">Add a photo</button>
-                    <button type="button" id="cr-photo-rm" class="btn" style="background:#fff;color:#b42318;border:1px solid var(--b);display:none;" onclick="clearNewPhoto()">Remove photo</button>
-                    <div class="hint" id="cr-photo-msg" style="margin-top:4px;">Shown on the till, on your online menu and on nyansatek.food.</div>
-                  </div>
-                </div>
-              </div>
-              <button type="submit" class="btn bf">Save item</button>''')
-sub("function removeProductPhoto(){", r'''// the photo picked on the Create form, waiting for the dish to be saved
-let newPhoto=null;
-const CR_PHOTO_HINT='Shown on the till, on your online menu and on nyansatek.food.';
-function pickNewPhoto(input){
-  const file=input.files&&input.files[0];input.value='';
-  if(!file)return;
-  if(!/^image\//.test(file.type)){alert('Please choose a photo.');return;}
-  const msg=document.getElementById('cr-photo-msg');msg.textContent='Preparing photo…';
-  const img=new Image(),url=URL.createObjectURL(file);
-  img.onload=()=>{
-    const max=1000,scale=Math.min(1,max/Math.max(img.width,img.height));
-    const c=document.createElement('canvas');c.width=Math.round(img.width*scale);c.height=Math.round(img.height*scale);
-    c.getContext('2d').drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);
-    c.toBlob(b=>{
-      if(!b){msg.textContent='Could not read that photo. Try another.';return;}
-      newPhoto=b;
-      const prev=document.getElementById('cr-photo-prev');prev.src=URL.createObjectURL(b);prev.style.display='block';
-      document.getElementById('cr-photo-rm').style.display='';
-      msg.textContent='Photo ready. Press Save item to keep it.';
-    },'image/jpeg',0.82);
-  };
-  img.onerror=()=>{URL.revokeObjectURL(url);msg.textContent='Could not read that photo. Try another.';};
-  img.src=url;
-}
-function clearNewPhoto(){
-  newPhoto=null;
-  const prev=document.getElementById('cr-photo-prev');if(!prev)return;
-  prev.removeAttribute('src');prev.style.display='none';
-  document.getElementById('cr-photo-rm').style.display='none';
-  document.getElementById('cr-photo-msg').textContent=CR_PHOTO_HINT;
-}
-function removeProductPhoto(){''')
+# ------------------------------------------------------------------ a photo when creating a dish (from Shop)
+sub('Shown on the till and on your online shop.', 'Shown on the till, on your online menu and on nyansatek.food.', 2)
+sub("waiting for the product to be saved", "waiting for the dish to be saved")
+sub("msg.textContent='Photo ready. Save to keep it.';", "msg.textContent='Photo ready. Press Save item to keep it.';")
 sub("        {org_id:p.org_id,barcode:p.barcode,name:p.name,price:p.price,cost_price:p.cost_price,stock:p.stock},\n        {onConflict:'org_id,barcode'}",
     "        {org_id:p.org_id,barcode:p.barcode,name:p.name,price:p.price,cost_price:p.cost_price,stock:p.stock,category:p.category||null,made_to_order:!!p.made_to_order},\n        {onConflict:'org_id,barcode'}")
 sub("      if(!rec.logApplied){\n        await sb.from('inventory_log').insert({org_id:p.org_id,product_id:data.id,",
