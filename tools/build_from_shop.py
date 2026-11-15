@@ -278,7 +278,8 @@ def guide(t):
         'Every order completed at the till appears under <b>New</b> with its table or order type, the dishes and any note.',
         'Tap <b>Start cooking</b> to move it to <b>Preparing</b>, then <b>Mark ready</b> when it can go out.',
         'Tap <b>Served</b> once it has been handed over. The ticket then leaves the board.',
-        'The board refreshes by itself every few seconds; <b>Refresh</b> updates it at once.'])}`)"""
+        'The board refreshes by itself every few seconds; <b>Refresh</b> updates it at once.',
+        ...(role==='admin'?['Give the kitchen its own login under <b>Staff</b> by choosing <b>Kitchen</b>. That login opens straight onto this screen and can do nothing else.']:[])])}`)"""
     r("      ${sale(true)}\n", "      ${sale(true)}\n      ${" + kitchen + "}\n")
     r("  ${sale(false)}\n", "  ${sale(false)}\n  ${" + kitchen + "}\n")
     r("['Cashier',\"swV('cv')\",'The till. Ring up sales, print or text receipts, issue credit invoices and reprint recent receipts.'],",
@@ -323,6 +324,113 @@ def guide(t):
 
 region('function renderGuide(', 'async function loadOverview(){', guide)
 
+# ------------------------------------------------------------------ kitchen logins
+# A 'kitchen' login sees only the Kitchen screen. The database enforces the same limits
+# (nyansatek-pos: supabase/migrations/20261115040000_kitchen_logins.sql).
+sub("    :[['cv','Till'],['kv','Kitchen'],['hv','How to use']];",
+    "    :role==='kitchen'\n    ?[['kv','Kitchen'],['hv','How to use']]\n    :[['cv','Till'],['kv','Kitchen'],['hv','How to use']];")
+sub("['chv','Cashiers'],['lv','SME Ledger']", "['chv','Staff'],['lv','SME Ledger']")
+sub("  await loadInv(prof.org_id);await refSales();await loadBranding();\n  loadOnlineCfg();\n  swV(prof.role==='admin'?'ov':'cv');toggleTen();",
+    "  // the kitchen login has no till: it skips the menu, today's sales and the online settings\n"
+    "  if(prof.role==='kitchen'){document.getElementById('sb').style.display='none';await loadBranding();swV('kv');updateOfflineUI();return;}\n"
+    "  await loadInv(prof.org_id);await refSales();await loadBranding();\n  loadOnlineCfg();\n  swV(prof.role==='admin'?'ov':'cv');toggleTen();")
+
+# the Cashiers screen becomes Staff logins: a cashier or a kitchen login
+sub('<h2>Manage Cashiers</h2>', '<h2>Staff logins</h2>')
+sub("<p class=\"hint\">Create login credentials for your cashiers. They'll sign in with the Staff Username + password you set below (instead of the business name).</p>",
+    "<p class=\"hint\">Create a login for each person at the till, and one for the screen in the kitchen. They sign in with the Staff Username and password you set below (instead of the business name).</p>")
+sub('color:var(--p);">+ New Cashier</h3>\n            <form id="chf">\n              <div class="fg"><label>Cashier Full Name</label>',
+    'color:var(--p);">+ New staff login</h3>\n            <form id="chf">\n'
+    '              <div class="fg"><label>This login is for</label><select id="ch-role"><option value="cashier">Cashier: the till and the kitchen screen</option><option value="kitchen">Kitchen: the kitchen screen only</option></select></div>\n'
+    '              <div class="fg"><label>Full name (or a name for the screen, e.g. Kitchen)</label>')
+sub('<button type="submit" class="btn bf ba">Create Cashier</button>', '<button type="submit" class="btn bf ba">Create login</button>')
+sub('color:var(--p);">Current Cashiers</h3>', 'color:var(--p);">Current logins</h3>')
+sub('<table id="cht"><thead><tr><th>Name</th><th>Username</th><th>Status</th><th></th></tr></thead>',
+    '<table id="cht"><thead><tr><th>Name</th><th>Username</th><th>For</th><th>Status</th><th></th></tr></thead>')
+sub('No cashiers yet — create one on the left.', 'No staff logins yet — create one on the left.')
+
+
+def staff_js(_old):
+    return r"""async function loadCashiers(){
+  const tb=document.querySelector('#cht tbody'),em=document.getElementById('ch-em');
+  if(!tb)return;
+  L(true);
+  const{data,error}=await sb.from('profiles').select('id,full_name,login_username,is_active,created_at,role')
+    .eq('org_id',prof.org_id).in('role',['cashier','kitchen']).order('full_name');
+  L(false);
+  tb.innerHTML='';
+  if(error){em.style.display='block';em.innerText='Could not load staff logins: '+error.message;return;}
+  if(!data||!data.length){em.style.display='block';return;}
+  em.style.display='none';
+  data.forEach(c=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td><strong>${E(c.full_name||'—')}</strong></td>
+      <td style="font-family:monospace;">${E(c.login_username||'—')}</td>
+      <td>${c.role==='kitchen'?'Kitchen':'Cashier'}</td>
+      <td><span class="badge ${c.is_active?'bg':'br'}">${c.is_active?'Active':'Inactive'}</span></td>
+      <td><button class="btn bsm bd">Delete</button></td>`;
+    tr.querySelector('button').onclick=()=>deleteCashier(c.id,c.full_name,c.role);
+    tb.appendChild(tr);
+  });
+}
+
+document.getElementById('chf').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const role=document.getElementById('ch-role').value;
+  const name=document.getElementById('ch-name').value.trim();
+  const username=document.getElementById('ch-user').value.trim().toLowerCase();
+  const password=document.getElementById('ch-pass').value;
+  if(!name||!username||password.length<8){alert('Fill in all fields — password must be at least 8 characters.');return;}
+  L(true);
+  const{data,error}=await sb.functions.invoke('create-cashier',{body:{
+    full_name:name,login_username:username,password,org_id:prof.org_id,
+    business_display_name:prof.display_name
+  }});
+  if(error||data?.error){L(false);alert('Error creating the login: '+(data?.error||error.message));return;}
+  // Every login starts as a cashier; a kitchen login is then limited to the kitchen screen.
+  let kitchenErr=null;
+  if(role==='kitchen'){const r=await sb.rpc('set_staff_role',{p_staff:data.cashier_id,p_role:'kitchen'});kitchenErr=r.error;}
+  L(false);
+  document.getElementById('chf').reset();
+  await loadCashiers();
+  if(kitchenErr){alert(`The login "${username}" was created, but it could not be limited to the kitchen screen (${kitchenErr.message}). For now it is a cashier login: delete it and try again.`);return;}
+  alert(role==='kitchen'
+    ?`Kitchen login "${username}" created. Sign in with it on the screen in the kitchen: it opens straight onto the Kitchen board and shows nothing else.`
+    :`Cashier "${name}" created. They can log in with Staff Username "${username}" and the password you set.`);
+});
+
+async function deleteCashier(id,name,role){
+  if(!confirm(`Delete the login for "${name||''}"? It will no longer be able to sign in. Past sales stay on record with the name attached.`))return;
+  L(true);
+  // the delete function only removes cashier logins, so a kitchen login is switched back first
+  if(role==='kitchen'){
+    const r=await sb.rpc('set_staff_role',{p_staff:id,p_role:'cashier'});
+    if(r.error){L(false);alert('Error deleting the login: '+r.error.message);return;}
+  }
+  const{data,error}=await sb.functions.invoke('delete-cashier',{body:{cashier_id:id,org_id:prof.org_id}});
+  L(false);
+  if(error||data?.error){alert('Error deleting the login: '+(data?.error||error.message));return;}
+  await loadCashiers();
+}
+
+"""
+
+
+region("async function loadCashiers(){", "function sbadge(s){", staff_js)
+
+# the guide: a kitchen login reads only about signing in and the kitchen screen
+sub("      ${sale(true)}\n      ${sec('kitchen','The kitchen screen',", "      ${role==='kitchen'?'':sale(true)}\n      ${sec('kitchen','The kitchen screen',")
+sub("      ${sec('credit-c','Selling on credit',`${ol([", "      ${role==='kitchen'?'':sec('credit-c','Selling on credit',`${ol([")
+sub("Your manager records the payment when they pay.'])}`)}\n      ${offline}\n", "Your manager records the payment when they pay.'])}`)}\n      ${role==='kitchen'?'':offline}\n")
+sub("Everything you need to take orders at the till and work the kitchen screen. Tap a heading to open it.</p></div>",
+    "${role==='kitchen'?'Everything you need to work the kitchen screen.':'Everything you need to take orders at the till and work the kitchen screen.'} Tap a heading to open it.</p></div>")
+sub("['Cashiers',\"swV('chv')\",'Create and delete cashier logins.'],", "['Staff',\"swV('chv')\",'Create and delete logins for your cashiers and for the kitchen screen.'],")
+sub("['cashiers','Cashiers'],", "['cashiers','Staff logins'],")
+sub("${sec('cashiers','Giving cashiers their own logins',`", "${sec('cashiers','Giving cashiers and the kitchen their own logins',`")
+sub("`Open <b>Cashiers</b> and fill in <b>+ New Cashier</b>: their full name, a staff username and a password of at least 8 characters. ${btn(\"swV('chv')\")}`,",
+    "`Open <b>Staff</b> and fill in <b>+ New staff login</b>: choose <b>Cashier</b> or <b>Kitchen</b>, then a full name, a staff username and a password of at least 8 characters. ${btn(\"swV('chv')\")}`,")
+sub("and only see the Till and the Kitchen screen.',", "and only see the Till and the Kitchen screen.',\n      'A <b>Kitchen</b> login is for the screen in the kitchen. It opens straight onto the Kitchen board and cannot take orders, see prices or change anything else.',")
+
 # ------------------------------------------------------------------ styles + the restaurant layer
 css = open(f'{P}/rest-layer.css', encoding='utf-8').read()
 i = s.index('</style>')
@@ -354,7 +462,8 @@ w = open(f'{SRC}/sw.js', encoding='utf-8').read()
 w, n = re.subn(r"const CACHE_NAME = 'nyansatek-pos-v\d+';[^\n]*", "const CACHE_NAME = 'nyansatek-rest-v1';", w)
 assert n == 1
 open(f'{OUT}/sw.js', 'w', encoding='utf-8').write(w)
-open(f'{OUT}/CNAME', 'w').write('nyansatek.rest\n')
+if not os.path.exists(f'{OUT}/CNAME'):
+    open(f'{OUT}/CNAME', 'w').write('nyansatek.rest\n')
 print('rest built:', len(s), 'bytes')
 
 # ------------------------------------------------------------------ menu/: the restaurant's own online menu page

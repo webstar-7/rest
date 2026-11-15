@@ -805,26 +805,27 @@ main>.view.on{animation:viewIn .3s ease both;}
     <!-- CASHIER MANAGEMENT (admin only) -->
     <div id="chv" class="view">
       <div class="card" style="max-width:1000px;margin:0 auto;">
-        <h2>Manage Cashiers</h2>
-        <p class="hint">Create login credentials for your cashiers. They'll sign in with the Staff Username + password you set below (instead of the business name).</p>
+        <h2>Staff logins</h2>
+        <p class="hint">Create a login for each person at the till, and one for the screen in the kitchen. They sign in with the Staff Username and password you set below (instead of the business name).</p>
         <div style="display:grid;grid-template-columns:1fr 1.3fr;gap:16px;">
           <div>
-            <h3 style="font-size:.88rem;margin-bottom:8px;color:var(--p);">+ New Cashier</h3>
+            <h3 style="font-size:.88rem;margin-bottom:8px;color:var(--p);">+ New staff login</h3>
             <form id="chf">
-              <div class="fg"><label>Cashier Full Name</label><input type="text" id="ch-name" required></div>
+              <div class="fg"><label>This login is for</label><select id="ch-role"><option value="cashier">Cashier: the till and the kitchen screen</option><option value="kitchen">Kitchen: the kitchen screen only</option></select></div>
+              <div class="fg"><label>Full name (or a name for the screen, e.g. Kitchen)</label><input type="text" id="ch-name" required></div>
               <div class="fg"><label>Staff Username (used to log in)</label><input type="text" id="ch-user" placeholder="e.g. john or mary01" required></div>
               <div class="fg"><label>Password (min 8 chars)</label>
                 <div style="position:relative;">
                   <input type="password" id="ch-pass" minlength="8" required style="padding-right:56px;">
                   <button type="button" onclick="const i=document.getElementById('ch-pass');const b=this;if(i.type==='password'){i.type='text';b.innerText='Hide';}else{i.type='password';b.innerText='Show';}" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--bl);font-size:.72rem;font-weight:600;cursor:pointer;">Show</button>
                 </div></div>
-              <button type="submit" class="btn bf ba">Create Cashier</button>
+              <button type="submit" class="btn bf ba">Create login</button>
             </form>
           </div>
           <div>
-            <h3 style="font-size:.88rem;margin-bottom:8px;color:var(--p);">Current Cashiers</h3>
-            <table id="cht"><thead><tr><th>Name</th><th>Username</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
-            <div id="ch-em" class="es" style="display:none;">No cashiers yet — create one on the left.</div>
+            <h3 style="font-size:.88rem;margin-bottom:8px;color:var(--p);">Current logins</h3>
+            <table id="cht"><thead><tr><th>Name</th><th>Username</th><th>For</th><th>Status</th><th></th></tr></thead><tbody></tbody></table>
+            <div id="ch-em" class="es" style="display:none;">No staff logins yet — create one on the left.</div>
           </div>
         </div>
       </div>
@@ -2230,7 +2231,9 @@ function buildNav(role){
   const tabs=role==='master'
     ?[['mv','Businesses'],['msmsv','Tenant SMS'],['miv','Inv. Manager'],['mlv','Financial Ledger']]
     :role==='admin'
-    ?[['ov','Overview'],['cv','Till'],['kv','Kitchen'],['av','Menu'],['chv','Cashiers'],['lv','SME Ledger'],['bv','Billing'],['stv','Settings'],['hv','How to use']]
+    ?[['ov','Overview'],['cv','Till'],['kv','Kitchen'],['av','Menu'],['chv','Staff'],['lv','SME Ledger'],['bv','Billing'],['stv','Settings'],['hv','How to use']]
+    :role==='kitchen'
+    ?[['kv','Kitchen'],['hv','How to use']]
     :[['cv','Till'],['kv','Kitchen'],['hv','How to use']];
   tabs.forEach(([k,l],i)=>{
     const b=document.createElement('button');b.id='t-'+k;b.innerHTML=(NAV_ICONS[k]||'')+'<span></span>';b.lastChild.textContent=l;
@@ -2246,6 +2249,8 @@ async function initTenant(){
   document.getElementById('sb').style.display='block';
   activeOrg=prof.org_id;
   setDef('sh-s','sh-e','pr-s','pr-e','is-s','is-e','ex-dt','si-dt');
+  // the kitchen login has no till: it skips the menu, today's sales and the online settings
+  if(prof.role==='kitchen'){document.getElementById('sb').style.display='none';await loadBranding();swV('kv');updateOfflineUI();return;}
   await loadInv(prof.org_id);await refSales();await loadBranding();
   loadOnlineCfg();
   swV(prof.role==='admin'?'ov':'cv');toggleTen();
@@ -2301,22 +2306,23 @@ function renderGuide(){
     <p>Keep selling when the internet drops. Sales are saved on the device — the red <b>Offline</b> badge shows you are offline and the yellow <b>pending sync</b> badge shows how many sales are waiting. They upload automatically when the connection returns; tap the yellow badge to sync straight away.</p>
     <p class="hint">Sign in once while online on each device first, so the menu is saved for offline use. Orders taken offline reach the Kitchen screen once they upload.</p>`);
   if(role!=='admin'){
-    el.innerHTML=`<div class="card gd-intro"><h2>How to use</h2><p class="hint">Everything you need to take orders at the till and work the kitchen screen. Tap a heading to open it.</p></div>
+    el.innerHTML=`<div class="card gd-intro"><h2>How to use</h2><p class="hint">${role==='kitchen'?'Everything you need to work the kitchen screen.':'Everything you need to take orders at the till and work the kitchen screen.'} Tap a heading to open it.</p></div>
      <div class="card gd-reel"><video muted loop playsinline autoplay preload="metadata" poster="assets/rest-reel.jpg" aria-label="A 20-second tour of the app"><source src="assets/rest-reel.mp4" type="video/mp4"></video>
     <div><h3>A 20-second tour</h3><p class="hint" style="margin:0">Taking an order for a table, the kitchen screen, switching a dish to sold out, and orders from nyansatek.food.</p></div></div>
       ${sec('signin','Signing in',`<p>Sign in with the <b>Staff Username</b> and password your manager created for you — not the business name.</p>`)}
-      ${sale(true)}
+      ${role==='kitchen'?'':sale(true)}
       ${sec('kitchen','The kitchen screen',`${ol([
         `Open <b>Kitchen</b> on the screen the kitchen can see. ${btn("swV('kv')")}`,
         'Every order completed at the till appears under <b>New</b> with its table or order type, the dishes and any note.',
         'Tap <b>Start cooking</b> to move it to <b>Preparing</b>, then <b>Mark ready</b> when it can go out.',
         'Tap <b>Served</b> once it has been handed over. The ticket then leaves the board.',
-        'The board refreshes by itself every few seconds; <b>Refresh</b> updates it at once.'])}`)}
-      ${sec('credit-c','Selling on credit',`${ol([
+        'The board refreshes by itself every few seconds; <b>Refresh</b> updates it at once.',
+        ...(role==='admin'?['Give the kitchen its own login under <b>Staff</b> by choosing <b>Kitchen</b>. That login opens straight onto this screen and can do nothing else.']:[])])}`)}
+      ${role==='kitchen'?'':sec('credit-c','Selling on credit',`${ol([
         'Add the items to the cart as normal.',
         'Tap <b>Issue Credit Invoice</b>, enter the customer’s name, phone (optional) and the date they will pay by.',
         'Tap <b>Issue Invoice &amp; Print</b> and give the customer their copy. Your manager records the payment when they pay.'])}`)}
-      ${offline}
+      ${role==='kitchen'?'':offline}
       <div class="card gd-help"><b>Something not working?</b> Ask your manager, or call NYANSATEK support on <a href="tel:0536340578">0536 340 578</a>.</div>`;
     return;
   }
@@ -2329,7 +2335,7 @@ function renderGuide(){
     ['Menu → Edit',"gdInv('ed')",'Change a dish’s name, section, prices or photo, and switch it between available and sold out.'],
     ['Menu → Received Supply',"gdInv('rs')",'Track goods from the supplier through warehouse and store before they go on sale.'],
     ['Menu → History',"gdInv('lg')",'A log of every stock change, for checking discrepancies.'],
-    ['Cashiers',"swV('chv')",'Create and delete cashier logins.'],
+    ['Staff',"swV('chv')",'Create and delete logins for your cashiers and for the kitchen screen.'],
     ['SME Ledger → Sales History',"gdLed('sh')",'Every sale in a date range, ready to print.'],
     ['SME Ledger → Profit Report',"gdLed('pr')",'Profit made in a date range, from your cost and selling prices.'],
     ['SME Ledger → Credit Sales',"gdLed('cs')",'Issue credit invoices and see who still owes you.'],
@@ -2345,7 +2351,7 @@ function renderGuide(){
   <div class="card gd-intro">
     <h2>How to use NYANSATEK Restaurant</h2>
     <p class="hint">Everything you need to set up your restaurant and run it day to day. Tap a heading to open it; the buttons take you straight to the right screen.</p>
-    <div class="gd-jump">${[['setup','Setting up'],['screens','What each screen does'],['products','Menu & sold out'],['cashiers','Cashiers'],['sale','Taking an order'],['kitchen','Kitchen'],['credit','Credit sales'],['supply','Receiving supply'],['suppliers','Suppliers'],['returns','Returns'],['reports','Reports & profit'],['offline','Offline'],['daily','Daily routine']].map(([k,l])=>`<a href="#gd-${k}" onclick="document.getElementById('gd-${k}').open=true">${l}</a>`).join('')}</div>
+    <div class="gd-jump">${[['setup','Setting up'],['screens','What each screen does'],['products','Menu & sold out'],['cashiers','Staff logins'],['sale','Taking an order'],['kitchen','Kitchen'],['credit','Credit sales'],['supply','Receiving supply'],['suppliers','Suppliers'],['returns','Returns'],['reports','Reports & profit'],['offline','Offline'],['daily','Daily routine']].map(([k,l])=>`<a href="#gd-${k}" onclick="document.getElementById('gd-${k}').open=true">${l}</a>`).join('')}</div>
   </div>
   <div class="card gd-reel"><video muted loop playsinline autoplay preload="metadata" poster="assets/rest-reel.jpg" aria-label="A 20-second tour of the app"><source src="assets/rest-reel.mp4" type="video/mp4"></video>
     <div><h3>A 20-second tour</h3><p class="hint" style="margin:0">Taking an order for a table, the kitchen screen, switching a dish to sold out, and orders from nyansatek.food.</p></div></div>
@@ -2369,10 +2375,11 @@ function renderGuide(){
       `<b>Fix a mistake or add a photo:</b> <b>✎ Edit</b> → search → change the details → <b>Save Changes</b>. ${btn("gdInv('ed')")}`,
       'Counted items with 5 or fewer left show up under <b>Low Stock</b> on the Overview.'
     ])}`)}
-  ${sec('cashiers','Giving cashiers their own logins',`
+  ${sec('cashiers','Giving cashiers and the kitchen their own logins',`
     ${ol([
-      `Open <b>Cashiers</b> and fill in <b>+ New Cashier</b>: their full name, a staff username and a password of at least 8 characters. ${btn("swV('chv')")}`,
+      `Open <b>Staff</b> and fill in <b>+ New staff login</b>: choose <b>Cashier</b> or <b>Kitchen</b>, then a full name, a staff username and a password of at least 8 characters. ${btn("swV('chv')")}`,
       'Give the cashier their username and password. They sign in with the username instead of the business name, and only see the Till and the Kitchen screen.',
+      'A <b>Kitchen</b> login is for the screen in the kitchen. It opens straight onto the Kitchen board and cannot take orders, see prices or change anything else.',
       'When a cashier leaves, tap <b>Delete</b> beside their name. Their past sales stay in your records.'
     ])}`)}
   ${sale(false)}
@@ -2381,7 +2388,8 @@ function renderGuide(){
         'Every order completed at the till appears under <b>New</b> with its table or order type, the dishes and any note.',
         'Tap <b>Start cooking</b> to move it to <b>Preparing</b>, then <b>Mark ready</b> when it can go out.',
         'Tap <b>Served</b> once it has been handed over. The ticket then leaves the board.',
-        'The board refreshes by itself every few seconds; <b>Refresh</b> updates it at once.'])}`)}
+        'The board refreshes by itself every few seconds; <b>Refresh</b> updates it at once.',
+        ...(role==='admin'?['Give the kitchen its own login under <b>Staff</b> by choosing <b>Kitchen</b>. That login opens straight onto this screen and can do nothing else.']:[])])}`)}
   ${sec('credit','Selling on credit and collecting payment',`
     ${ol([
       `At the till: add the items, tap <b>Issue Credit Invoice</b>, enter the customer’s name, phone and due date, then <b>Issue Invoice &amp; Print</b>. You can also issue one from SME Ledger → Credit Sales. ${btn("gdLed('cs')")}`,
@@ -2612,26 +2620,28 @@ async function loadCashiers(){
   const tb=document.querySelector('#cht tbody'),em=document.getElementById('ch-em');
   if(!tb)return;
   L(true);
-  const{data,error}=await sb.from('profiles').select('id,full_name,login_username,is_active,created_at')
-    .eq('org_id',prof.org_id).eq('role','cashier').order('full_name');
+  const{data,error}=await sb.from('profiles').select('id,full_name,login_username,is_active,created_at,role')
+    .eq('org_id',prof.org_id).in('role',['cashier','kitchen']).order('full_name');
   L(false);
   tb.innerHTML='';
-  if(error){em.style.display='block';em.innerText='Could not load cashiers: '+error.message;return;}
+  if(error){em.style.display='block';em.innerText='Could not load staff logins: '+error.message;return;}
   if(!data||!data.length){em.style.display='block';return;}
   em.style.display='none';
   data.forEach(c=>{
     const tr=document.createElement('tr');
     tr.innerHTML=`<td><strong>${E(c.full_name||'—')}</strong></td>
       <td style="font-family:monospace;">${E(c.login_username||'—')}</td>
+      <td>${c.role==='kitchen'?'Kitchen':'Cashier'}</td>
       <td><span class="badge ${c.is_active?'bg':'br'}">${c.is_active?'Active':'Inactive'}</span></td>
       <td><button class="btn bsm bd">Delete</button></td>`;
-    tr.querySelector('button').onclick=()=>deleteCashier(c.id,c.full_name);
+    tr.querySelector('button').onclick=()=>deleteCashier(c.id,c.full_name,c.role);
     tb.appendChild(tr);
   });
 }
 
 document.getElementById('chf').addEventListener('submit',async e=>{
   e.preventDefault();
+  const role=document.getElementById('ch-role').value;
   const name=document.getElementById('ch-name').value.trim();
   const username=document.getElementById('ch-user').value.trim().toLowerCase();
   const password=document.getElementById('ch-pass').value;
@@ -2641,19 +2651,30 @@ document.getElementById('chf').addEventListener('submit',async e=>{
     full_name:name,login_username:username,password,org_id:prof.org_id,
     business_display_name:prof.display_name
   }});
+  if(error||data?.error){L(false);alert('Error creating the login: '+(data?.error||error.message));return;}
+  // Every login starts as a cashier; a kitchen login is then limited to the kitchen screen.
+  let kitchenErr=null;
+  if(role==='kitchen'){const r=await sb.rpc('set_staff_role',{p_staff:data.cashier_id,p_role:'kitchen'});kitchenErr=r.error;}
   L(false);
-  if(error||data?.error){alert('Error creating cashier: '+(data?.error||error.message));return;}
   document.getElementById('chf').reset();
   await loadCashiers();
-  alert(`Cashier "${name}" created. They can log in with Staff Username "${username}" and the password you set.`);
+  if(kitchenErr){alert(`The login "${username}" was created, but it could not be limited to the kitchen screen (${kitchenErr.message}). For now it is a cashier login: delete it and try again.`);return;}
+  alert(role==='kitchen'
+    ?`Kitchen login "${username}" created. Sign in with it on the screen in the kitchen: it opens straight onto the Kitchen board and shows nothing else.`
+    :`Cashier "${name}" created. They can log in with Staff Username "${username}" and the password you set.`);
 });
 
-async function deleteCashier(id,name){
-  if(!confirm(`Delete cashier "${name||''}"? They will no longer be able to log in. Their past sales stay on record with their name attached.`))return;
+async function deleteCashier(id,name,role){
+  if(!confirm(`Delete the login for "${name||''}"? It will no longer be able to sign in. Past sales stay on record with the name attached.`))return;
   L(true);
+  // the delete function only removes cashier logins, so a kitchen login is switched back first
+  if(role==='kitchen'){
+    const r=await sb.rpc('set_staff_role',{p_staff:id,p_role:'cashier'});
+    if(r.error){L(false);alert('Error deleting the login: '+r.error.message);return;}
+  }
   const{data,error}=await sb.functions.invoke('delete-cashier',{body:{cashier_id:id,org_id:prof.org_id}});
   L(false);
-  if(error||data?.error){alert('Error deleting cashier: '+(data?.error||error.message));return;}
+  if(error||data?.error){alert('Error deleting the login: '+(data?.error||error.message));return;}
   await loadCashiers();
 }
 
