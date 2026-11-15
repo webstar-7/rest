@@ -1,0 +1,33 @@
+
+/* ---------- restaurant edition ---------- */
+/* till: menu sections */
+.pg{align-content:start;}
+.pg-sec{grid-column:1/-1;font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--p);padding:8px 2px 2px;border-bottom:1px solid var(--b);}
+.pg-sec:first-child{padding-top:0;}
+/* till: eat in / takeaway / delivery, table, note */
+.ot{margin-bottom:8px;}
+.ot-seg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:#f3ebe9;border-radius:9px;padding:3px;margin-bottom:6px;}
+.ot-seg button{border:0;background:none;padding:7px 4px;border-radius:7px;font-size:.78rem;font-weight:650;color:var(--g);cursor:pointer;}
+.ot-seg button.on{background:var(--p);color:#fff;}
+.ot-row{display:flex;gap:6px;}
+.ot-row .fg{flex:1;min-width:0;margin-bottom:6px;}
+/* kitchen board */
+.k-bar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
+.k-bar h2{margin:0;color:var(--p);}
+.k-bar .hint{flex:1;min-width:160px;}
+.k-board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;align-items:start;}
+.k-col{background:#f6f1ef;border-radius:12px;padding:10px;min-height:120px;}
+.k-h{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:.8rem;letter-spacing:.06em;text-transform:uppercase;color:var(--p);padding:2px 4px 8px;}
+.k-h span{background:#fff;border-radius:999px;padding:1px 9px;font-size:.75rem;color:var(--t);}
+.k-t{background:#fff;border-radius:10px;padding:11px 12px;margin-bottom:9px;border-left:5px solid var(--a);box-shadow:0 1px 3px rgba(30,10,14,.08);}
+.k-t.k-preparing{border-left-color:#d97706;}
+.k-t.k-ready{border-left-color:var(--s);}
+.k-top{display:flex;justify-content:space-between;gap:8px;align-items:baseline;}
+.k-top b{font-size:1rem;color:var(--t);}
+.k-top span{font-size:.72rem;color:var(--g);white-space:nowrap;}
+.k-inv{font-size:.7rem;color:var(--g);margin-top:1px;}
+.k-t ul{list-style:none;margin:8px 0;padding:0;font-size:.92rem;line-height:1.45;}
+.k-t ul b{display:inline-block;min-width:2.1em;color:var(--p);}
+.k-note{background:#fdf0d9;color:#8a5700;border-radius:7px;padding:5px 8px;font-size:.8rem;font-weight:600;margin-bottom:8px;}
+.k-empty{color:var(--g);font-size:.8rem;text-align:center;padding:18px 4px;}
+@media(max-width:760px){.k-board{grid-template-columns:1fr;}}
