@@ -252,9 +252,6 @@ for old, new in [
     ('NYANSATEK will review your shop.', 'NYANSATEK will review your restaurant.'),
     ('Your shop is approved.', 'Your restaurant is approved.'),
     ('Sell online with your own shop page: your products with photos and prices,', 'Take orders online with your own menu page: your dishes with photos and prices,'),
-    # restaurants: customers pay GH₵5 on top of each dish (shops: 5%)
-    ('customers pay 5% on top; you get your full price', 'customers pay GH₵5 on top of each dish; you get your full price'),
-    ('Customers pay 5% on top of your prices.', 'Customers pay GH₵5 on top of each dish.'),
 ]:
     sub(old, new)
 
