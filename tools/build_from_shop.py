@@ -230,8 +230,8 @@ sub("  const fields={name,barcode:barcode||null,price,cost_price,stock};\n",
     "  const fields={name,barcode:barcode||null,price,cost_price,stock};\n  if(ctx!=='m'){\n    fields.category=document.getElementById('ed-cat').value.trim()||null;\n    fields.made_to_order=document.getElementById('ed-mto').checked;\n    if(fields.made_to_order)fields.stock=document.getElementById('ed-avail').checked?MTO_STOCK:0;\n  }\n")
 sub("  if(!name){alert('Product name is required.');return;}\n  const fields=", "  if(!name){alert('A name is required.');return;}\n  const fields=")
 sub("      <td style=\"text-align:center;\">${sbadge(it.stock)}</td>`;\n    tr.querySelectorAll('.ip')", "      <td style=\"text-align:center;\">${mtoBadge(it)}</td>`;\n    tr.querySelectorAll('.ip')")
-sub("tb.innerHTML='<tr><td colspan=\"6\" style=\"text-align:center;color:var(--g);padding:20px;\">No products yet.</td></tr>';return;}\n  inv.forEach(it=>{\n    const profit=",
-    "tb.innerHTML='<tr><td colspan=\"6\" style=\"text-align:center;color:var(--g);padding:20px;\">Your menu is empty.</td></tr>';return;}\n  inv.forEach(it=>{\n    const profit=")
+sub("tb.innerHTML='<tr><td colspan=\"8\" style=\"text-align:center;color:var(--g);padding:20px;\">No products yet.</td></tr>';return;}\n  inv.forEach(it=>{\n    const profit=",
+    "tb.innerHTML='<tr><td colspan=\"8\" style=\"text-align:center;color:var(--g);padding:20px;\">Your menu is empty.</td></tr>';return;}\n  inv.forEach(it=>{\n    const profit=")
 sub("  renderPG();\n  renderInvTable(prof.role==='master'?'mit':'ait');\n  updateOfflineUI();\n}",
     "  renderPG();\n  renderInvTable(prof.role==='master'?'mit':'ait');\n  { // menu sections already in use, offered as suggestions when adding a dish\n    const dl=document.getElementById('menu-sections');\n    if(dl)dl.innerHTML=[...new Set(inv.map(p=>p.category).filter(Boolean))].sort().map(c=>`<option value=\"${E(c)}\">`).join('');\n  }\n  updateOfflineUI();\n}")
 
@@ -457,6 +457,9 @@ assert len(main_end) >= 1
 k = main_end[-2] if len(main_end) >= 2 else main_end[-1]
 s = s[:k] + "\n" + layer + s[k:]
 assert 'function loadKitchen' in s
+
+# Wholesale / Promo price levels are a Shop feature; restaurants sell at one menu price.
+sub(".plv.on{display:flex;}", ".plv.on{display:flex;}\n.tier{display:none!important;}")
 
 open(f'{OUT}/index.html', 'w', encoding='utf-8').write(s)
 
